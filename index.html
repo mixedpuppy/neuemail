@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="initial-scale=1.0; maximum-scale=1.0; width=320px">
+    <title>&#x270E; Neue Mail</title>
+    <link rel="stylesheet" type="text/css" href="page.css">
+    <script type="text/javascript" src="js/jquery-1.5.min.js"></script>
+    <script type="text/javascript" src="js/jquery-textOverflow.js"></script>
+    <script type="text/javascript" src="js/jquery.tmpl.min.js"></script>
+    <script type="text/javascript" src="js/jquery.prettydate.js"></script>
+    <script type="text/javascript" src="js/jquery.ba-hashchange.min.js"></script>
+    <script type="text/javascript" src="js/storage.js"></script>
+    <script type="text/javascript" src="js/remotestore.js"></script>
+    <script type="text/javascript" src="js/app.js"></script>
+    <script type="text/javascript" src="js/neue.js"></script>
+</head>
+
+<body>
+
+
+<script id="tmplBoxList" type="text/x-jquery-tmpl">
+  <li id="${id}">${name}</li>
+</script>
+
+<script id="tmplHeaderList" type="text/x-jquery-tmpl">
+  <li id="${uid}" class="${seen ? 'msg_seen' : 'msg_unseen'} messageItem messagePrev">
+    <div class="msgHeader hbox">
+      <div class="meta">
+        <input type="checkbox">
+      </div>
+      <div class="sender overflow boxFlex">
+        ${from[0].personal || fromaddress || reply_toaddress}
+      </div>
+      <div class="meta">
+        <span class="date">${date}</span>
+        <span class="star ${flagged ? 'starred':''}"></span>
+      </div>
+    </div>
+    <div class="subjectWrap hbox">
+      <span class="subject boxFlex overflow">${subject}</span>
+      <div class="meta">
+          <span class="msgCount">${typeof(references) !== 'undefined' ? references.split(/\s/).length : 1}</span>
+      </div>
+    </div>
+  </li>
+
+</script>
+
+<script id="tmplMessage" type="text/x-jquery-tmpl">
+  <div class="boxFlex">
+    <div class="title hbox">
+      <div class="subject overflow boxFlex">
+        ${headers.subject}
+      </div>
+      <div class="tags">
+        <span>inbox</span>
+      </div>
+      <span class="starred">&#9733;</span>
+    </div>
+    <div class="messageBody">
+      <div class="messageBodyHeader hbox">
+        <div class="boxFlex">
+          <span class="from">${headers.from[0].personal || headers.sender[0].personal}</span>
+          <span class="to">to ${headers.to[0].personal || headers.toaddress }</span>
+        </div>
+        <div>
+          <span class="date">${headers.date}</span>
+        </div>
+      </div>
+      <div class="theBody">
+      {{if type == "plain"}}
+        <pre>${body}
+
+</pre>
+      {{else type == "html"}}
+      <iframe id="bodyFrame" width="100%" height="100%" style="border: none" src="about:blank"></iframe>
+      {{/if}}
+      </div>
+      <div class="messageBodyFooter hbox">
+        <div class="boxFlex">
+          <button>reply</button>
+          <button>forward</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</script>
+
+<div id="wrapper">
+    
+    <div id="content">
+        <div data-role="toolbar" id="search">
+            <div class="hbox">
+                <input id="searchText" type="text" placeholder="search" class="boxFlex search">
+                <button id="searchSubmit"><img src="i/search.png"></button>
+            </div>
+        </div>
+
+      <div data-role="pages">
+        <div data-role="page" id="labels" class="primary clearfix boxFlex">
+            <div data-role="header" class="hbox">
+                <h1 class="boxFlex" >Labels</h1>
+                <button class="refresh"></button>
+            </div>
+            
+            <ul id="folderList" class="default">
+                <li class="inbox">Inbox</li>
+                <li>Starred</li>
+                <li>Sent</li>
+                <li>Drafts</li>
+                <li>All Mail</li>
+                <li>Spam</li>
+                <li>Trash</li>
+            </ul>
+            
+        </div>
+
+        <div data-role="page" id="messages" class="primary clearfix boxFlex selected">
+            <div data-role="header" class="hbox">
+                <h1 class="boxFlex" id="folderName">Inbox</h1>
+                <button class="refresh"></button>
+            </div>
+            <ul id="msgList">
+<!--
+                <li class="messagePrev active">
+                    <div class="msgHeader hbox">
+                        <div class="sender overflow boxFlex">
+                            Bryan clark
+                        </div>
+                        <div class="meta">
+                            <time>Oct 8</time>
+                            <span class="starred">&#x2605;</span>
+                        </div>
+                    </div>
+                    <div class="subjectWrap hbox">
+                        <span class="subject boxFlex overflow">Lunch tomorrow</span>
+                        <input type="checkbox">
+                    </div>
+                </li>
+                
+                <li class="messagePrev">
+                    <div class="msgHeader hbox">
+                        <div class="sender overflow boxFlex">
+                            David Ascher, James Burke, Shane Caraveo, Andy Chung
+                        </div>
+                        <div class="meta">
+                            <span class="msgCount">13</span>
+                            <time>Oct 7</time>
+                            <span class="starred">&#x2605;</span>
+                        </div>
+                    </div>
+                    <div class="subjectWrap hbox">
+                        <span class="subject boxFlex overflow">Tentative F1 meeting in the upcoming months</span>
+                        <input type="checkbox">
+                    </div>
+                </li>
+                
+                <li class="messagePrev">
+                    <div class="msgHeader hbox">
+                        <div class="sender overflow boxFlex">
+                            Roland Tanglao
+                        </div>
+                        <div class="meta">
+                            <span class="msgCount">2</span>
+                            <time>Oct 7</time>
+                            <span class="starred">&#x2605;</span>
+                        </div>
+                    </div>
+                    <div class="subjectWrap hbox">
+                        <span class="subject boxFlex overflow">This is a really long subject and we'll see what happens to it</span>
+                        <input type="checkbox">
+                    </div>
+                </li>
+                
+                <li class="messagePrev">
+                    <div class="msgHeader hbox">
+                        <div class="sender overflow boxFlex">
+                            Jonathan Protzenko, David Ascher
+                        </div>
+                        <div class="meta">
+                            <span class="msgCount">6</span>
+                            <time>Oct 6</time>
+                            <span class="starred">&#x2605;</span>
+                        </div>
+                    </div>
+                    <div class="subjectWrap hbox">
+                        <span class="subject boxFlex overflow">TB conversations</span>
+                        <input type="checkbox">
+                    </div>
+                </li>
+                
+-->
+            </ul>
+        </div>
+
+
+
+        <div data-role="page" id="settings" class="primary clearfix boxFlex">
+<!--
+            <div data-role="header" class="hbox">
+                <h1 class="boxFlex">Settings</h1>
+            </div>
+-->
+
+            <ul class="settingsList">
+                <li class="hbox inputWrap">
+                    <label for="fullname">fullname:</label>
+                    <input id="fullname" type="text" class="boxFlex">
+                </li>
+                <li class="hbox inputWrap">
+                    <label for="email">email:</label>
+                    <input id="email" type="text" class="boxFlex">
+                </li>
+                <li class="hbox inputWrap">
+                    <label for="username">username:</label>
+                    <input id="username" type="text" class="boxFlex">
+                </li>
+    
+                <li class="hbox inputWrap">
+                    <label for="password">password:</label>
+                    <input id="password" type="password" class="boxFlex">
+                </li>
+
+                <li class="hbox inputWrap">
+                    <label for="password2">password:</label>
+                    <input id="password2" type="password" class="boxFlex">
+                </li>
+                <li class="hbox inputWrap">
+                    <span class="boxFlex"></span>
+                    <button id="saveSettings" class="save">save</button>
+                    <button id="discardSettings">discard</button>
+                </li>
+            </ul>
+
+        </div>
+
+    
+        <div data-role="page" id="conversation" class="secondary clearfix boxFlex">
+
+            <div class="message">
+                <div class="fullMsgHeader hbox">
+                    <div class="boxFlex">
+                        <button>archive</button>
+                        <button>delete</button>
+                        <button>spam</button>
+                    </div>
+                    <div>
+                        <button>move</button>
+                        <button>more</button>
+                    </div>
+                </div>
+                <div id="messageContent">
+                    <div class="title hbox">
+                        <div class="subject overflow boxFlex">
+                            Lunch tomorrow
+                        </div>
+                        <div class="tags">
+                            <span>inbox</span>
+                        </div>
+                        <span class="starred">&#x2605;</span>
+                    </div>
+                    <div class="messageBody">
+                        <div class="messageBodyHeader hbox">
+                            <div class="boxFlex">
+                                <span class="from">Bryan Clark</span> 
+                                <span class="to">to Andy Chung</span>
+                            </div>
+                            <div>
+                                <span class="date">Oct 7</span>
+                            </div>
+                        </div>
+                        <p>Hey Andy</p>
+                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec cursus consequat ante ut viverra. Integer turpis libero, fringilla at bibendum sed, elementum ut diam. Cras dignissim turpis nec lorem placerat pellentesque. Nam enim risus, suscipit id volutpat fermentum, venenatis et torto</p>
+                        <div class="messageBodyFooter hbox">
+                            <div class="boxFlex">
+                                <button>reply</button>
+                                <button>forward</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div data-role="page" id="compose" class="popup secondary boxFlex">
+            <div class="popup-inner">
+                <div class="compose-inner">
+                    <form name="composeMessage" class="vbox">
+                        <div class="hbox inputWrap">
+                            <label for="to">to:</label>
+                            <input id="to" type="text" class="boxFlex">
+                        </div>
+                        
+                        <div class="hbox inputWrap">
+                            <label for="messageSubject">subject:</label>
+                            <input id="messageSubject" type="text" class="boxFlex">
+                        </div>
+                        
+                        <textarea id="messageBody" class="composeInput boxFlex" placeholder="message..."></textarea>
+        
+                        <footer class="hbox">
+                            <button id="discardMessage">discard</button>
+                            <div class="boxFlex"></div>
+                            <button id="saveDraftMessage" class="save">save</button>
+                            <button id="sendMessage" class="send">send</button>
+                        </footer>
+                    </form>
+                </div>
+            </div>
+        </div>
+      </div>
+    </div>
+    
+    <div data-role="toolbar" id="apptoolbar">
+        <nav>
+            <ul class="clearfix">
+                <li class="labels" data-for="labels"></li>
+                <li class="messages selected" data-for="messages"></li>
+                <li class="compose" data-for="compose"></li>
+                <li class="search off" data-for="search"></li>
+                <li class="settings" data-for="settings"></li>
+            </ul>
+        </nav>
+    </div>
+
+    <div data-role="toolbar" id="msgtoolbar">
+        <nav>
+            <ul class="clearfix">
+                <li class="back active"></li>
+                <li class="search off" data-for="search"></li>
+            </ul>
+        </nav>
+    </div>
+
+</div>
+
+</body>
+</html>
