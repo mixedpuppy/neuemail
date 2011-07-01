@@ -11,7 +11,7 @@ dump("document.ready\n");
         var page = data.shift();
         var target = $('#'+page);
         var menu = $("nav li."+page);
-        dump("page "+page+" data "+data+"\n");
+        //dump("page "+page+" data ["+data+"]\n");
         // change the menu highlight
         menu.siblings().removeClass('selected');
         menu.addClass('selected');
@@ -28,7 +28,7 @@ dump("document.ready\n");
         pages.show(page, data);
         
         // mo fuckin overflow
-        $('.overflow').textOverflow(null,true);
+        $('.overflow').textOverflow(null,false);
     }
 
     // setup the toolbar links
@@ -64,7 +64,12 @@ dump("document.ready\n");
     })
     // remove design elements we dont want
     $('#msgList').empty();
-    goPage('#messages');
+    
+    mail.init(function() {
+        location.hash = '';
+        goPage( '#messages' );
+    })
+
     
 });
 

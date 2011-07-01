@@ -9,6 +9,7 @@
     <script type="text/javascript" src="js/jquery.tmpl.min.js"></script>
     <script type="text/javascript" src="js/jquery.prettydate.js"></script>
     <script type="text/javascript" src="js/jquery.ba-hashchange.min.js"></script>
+    <script type="text/javascript" src="js/service.js"></script>
     <script type="text/javascript" src="js/storage.js"></script>
     <script type="text/javascript" src="js/remotestore.js"></script>
     <script type="text/javascript" src="js/app.js"></script>
@@ -60,7 +61,7 @@
     <div class="messageBody">
       <div class="messageBodyHeader hbox">
         <div class="boxFlex">
-          <span class="from">${headers.from[0].personal || headers.sender[0].personal}</span>
+          <span class="from">${headers.from[0].personal || (headers.sender ? headers.sender[0].personal : headers.fromaddress)}</span>
           <span class="to">to ${headers.to[0].personal || headers.toaddress }</span>
         </div>
         <div>

@@ -37,8 +37,16 @@ function assert(test, msg) {
 }
 
 var mail = {
+    init: function(cb) {
+        service.load('/api/schema', function(api) {
+            //dump("api loaded\n");
+            mail.api =  api;
+            cb();
+        });
+    },
 
     labels: function(refresh, ok, err) {
+        //dump("try to get lables\n");
         var account = accounts.current;
         var labels = accounts.get('labels', []);
         if (labels && labels.length > 0 && !refresh) {
@@ -46,32 +54,22 @@ var mail = {
                 ok(labels);
             return;
         }
-
-        $.ajax({
-            url: "/api/folder",
-            type: "POST",
-            data: {
-                username: account.username,
-                password: account.password
-            },
-            success: function(data, textStatus, jqXHR) {
-                dump("data: "+JSON.stringify(data)+"\n");
-                labels = [];
-                $.each(data.result, function(i) {
-                   var m = /^\{.+\}(.*)$/.exec(data.result[i]);
-                   if (m) {
-                    labels.push(m[1]);
-                   } else {
-                    labels.push(data.result[i]);
-                   }
-                });
-                   
-                accounts.set('labels', labels);
-                if (ok)
-                    ok(labels);
-            },
-            error: err
-        });
+        mail.api.storage.list_folders(account, function(data) {
+            //dump("data: "+JSON.stringify(data)+"\n");
+            labels = [];
+            $.each(data.result, function(i) {
+               var m = /^\{.+\}(.*)$/.exec(data.result[i]);
+               if (m) {
+                labels.push(m[1]);
+               } else {
+                labels.push(data.result[i]);
+               }
+            });
+               
+            accounts.set('labels', labels);
+            if (ok)
+                ok(labels);
+        })
     },
     
     
@@ -80,7 +78,7 @@ var mail = {
     MESSAGES_REFRESH: 4,
     PAGE_SIZE: 25,
     messages: function(label, flags, index, search, ok, err) {
-        dump("get messages: ["+label+"] index "+index+" flags: "+flags+" search: ["+search+"]\n");
+        //dump("get messages: ["+label+"] index "+index+" flags: "+flags+" search: ["+search+"]\n");
         if (label === "") {
             mail.labels(true, function(labels) {
                 mail.messages(labels[0], flags, index, search, ok, err);
@@ -102,6 +100,7 @@ var mail = {
         }
         
         var data = {
+                name: label,
                 username: account.username,
                 password: account.password,
                 flags: flags,
@@ -111,26 +110,20 @@ var mail = {
         if (search)
             data.search = search;
 
-        $.ajax({
-            url: "/api/folder/"+label,
-            type: "POST",
-            data: data,
-            success: function(data, textStatus, jqXHR) {
-                dump("data: "+JSON.stringify(data)+"\n");
-                if (data.result === null)
-                    return;
-                dump("new messages: "+data.result.entries.length+"\n");
-                
-                if (flags & this.MESSAGES_NEW) {
-                    messages.unshift.apply(messages, data.result.entries);
-                } else {
-                    messages.push.apply(messages, data.result.entries);
-                }
-                accounts.set('messages:'+label, messages);
-                if (ok)
-                    ok(messages);
-            },
-            error: err
+        mail.api.storage.list_messages(data, function(data) {
+            //dump("data: "+JSON.stringify(data)+"\n");
+            if (data.result === null)
+                return;
+            //dump("new messages: "+data.result.entries.length+"\n");
+            
+            if (flags & this.MESSAGES_NEW) {
+                messages.unshift.apply(messages, data.result.entries);
+            } else {
+                messages.push.apply(messages, data.result.entries);
+            }
+            accounts.set('messages:'+label, messages);
+            if (ok)
+                ok(messages);
         });
     },
     processMessage: function(msg) {
@@ -162,42 +155,31 @@ var mail = {
         return msg;
     },
     message: function(id, ok, err) {
-        
         var account = accounts.current;
-        $.ajax({
-            url: "/api/message/"+id,
-            type: "POST",
-            data: {
-                username: account.username,
-                password: account.password,
-                id: id
-            },
-            success: function(data, textStatus, jqXHR) {
-                //dump(JSON.stringify(data)+"\n\n");
-                var msg = mail.processMessage(data.result);
-                if (ok)
-                    ok(msg);
-            },
-            error: err
-        });
-    },
-    send: function(data) {
-        $.extend(data, accounts.current);
-        $.ajax({
-            url: "/api/send",
-            type: "POST",
-            data: data,
-            success: function(data, textStatus, jqXHR) {
-                //dump(JSON.stringify(data)+"\n\n");
-                if (data.result === "ok")
-                    history.go(-1)
-                else
-                    alert(data.error);
-            },
-            error: function(jqXHR, errorStr, ex) {
-                //dump("failed getting folders "+ex+"\n");
-            }
+        var indata = {
+            username: account.username,
+            password: account.password,
+            mid: id
+        };
+        mail.api.storage.get_message(indata, function(data) {
+            //dump(JSON.stringify(data)+"\n\n");
+            var msg = mail.processMessage(data.result);
+            //dump(JSON.stringify(msg)+"\n\n");
+            if (ok)
+                ok(msg);
         });        
+    },
+    send: function(indata) {
+        $.extend(indata, accounts.current);
+        mail.api.storage.send_message(indata, function(data) {
+            //dump(JSON.stringify(data)+"\n\n");
+            if (data.result === "ok")
+                history.go(-1)
+            else
+                alert(data.error);
+        });
     }
 }
+
+
 
